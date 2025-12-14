@@ -1,0 +1,15 @@
+{
+  "name": "ogv-project-example",
+  "version": "1.0.0",
+  "description": "D3 Org Chart Example",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server-persistent.js",
+    "start:memory": "node server-multi.js",
+    "start:single": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "firebase-admin": "^13.6.0"
+  }
+}

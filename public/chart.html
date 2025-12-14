@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrgFlow - Chart Editor</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="chart.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <a href="/dashboard.html" class="back-btn" title="Back to dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+        </a>
+        <div class="chart-title-container">
+          <input type="text" id="chartTitleInput" class="chart-title-input" placeholder="Untitled Chart">
+          <span class="save-indicator" id="saveIndicator">
+            <span class="save-dot"></span>
+            <span class="save-text">Saved</span>
+          </span>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="toolbar">
+          <button class="tool-btn" id="addNodeBtn" title="Add Node (A)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span>Add Node</span>
+          </button>
+          <div class="toolbar-divider"></div>
+          <button class="tool-btn" id="zoomInBtn" title="Zoom In (+)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="11" y1="8" x2="11" y2="14"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button class="tool-btn" id="zoomOutBtn" title="Zoom Out (-)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+          </button>
+          <button class="tool-btn" id="fitBtn" title="Fit to Screen (F)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </button>
+          <div class="toolbar-divider"></div>
+          <button class="tool-btn danger" id="deleteBtn" title="Delete Mode (D)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="tool-btn" id="exportBtn" title="Export">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Export</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas -->
+    <main class="canvas-container" id="canvasContainer">
+      <svg id="canvas" class="canvas"></svg>
+      
+      <!-- Zoom indicator -->
+      <div class="zoom-indicator" id="zoomIndicator">100%</div>
+      
+      <!-- Mini map -->
+      <div class="minimap" id="minimap">
+        <svg class="minimap-svg" id="minimapSvg"></svg>
+        <div class="minimap-viewport" id="minimapViewport"></div>
+      </div>
+    </main>
+
+    <!-- Node Editor Panel -->
+    <aside class="editor-panel" id="editorPanel">
+      <div class="panel-header">
+        <h3>Edit Node</h3>
+        <button class="panel-close" id="closePanel" title="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" id="nodeName" placeholder="Enter name">
+        </div>
+        <div class="form-group">
+          <label>Title / Role</label>
+          <input type="text" id="nodeTitle" placeholder="Enter title">
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" id="nodeDepartment" placeholder="Enter department">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="nodeNotes" rows="3" placeholder="Additional notes..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Node Color</label>
+          <div class="color-options">
+            <button class="color-btn" data-color="#3B82F6" style="background: #3B82F6" title="Blue"></button>
+            <button class="color-btn" data-color="#8B5CF6" style="background: #8B5CF6" title="Purple"></button>
+            <button class="color-btn" data-color="#10B981" style="background: #10B981" title="Green"></button>
+            <button class="color-btn" data-color="#F59E0B" style="background: #F59E0B" title="Yellow"></button>
+            <button class="color-btn" data-color="#EF4444" style="background: #EF4444" title="Red"></button>
+            <button class="color-btn" data-color="#6B7280" style="background: #6B7280" title="Gray"></button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button class="btn btn-danger-outline" id="deleteNodeBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Delete Node
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip" class="tooltip"></div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <p>Loading chart...</p>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="chart.js"></script>
+</body>
+</html>

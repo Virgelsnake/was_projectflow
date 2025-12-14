@@ -1,0 +1,353 @@
+{
+  "acme-corp": {
+    "id": "acme-corp",
+    "title": "Acme Corp - Executive Team",
+    "nextId": 12,
+    "createdAt": "2025-12-14T18:57:37.494Z",
+    "updatedAt": "2025-12-14T20:25:30.037Z",
+    "nodes": [
+      {
+        "id": 1,
+        "parentId": null,
+        "name": "CEO",
+        "description": "Chief Executive Officer",
+        "responsible": "John Smith",
+        "status": "Active",
+        "cost": "$500k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 2,
+        "parentId": 1,
+        "name": "Ludo",
+        "description": "Chief Technology Officer",
+        "responsible": "Jane Doe",
+        "status": "Active",
+        "cost": "$350k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 3,
+        "parentId": 1,
+        "name": "Stevo",
+        "description": "Chief Financial Officer",
+        "responsible": "Bob Wilson",
+        "status": "Active",
+        "cost": "$350k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 4,
+        "parentId": 1,
+        "name": "monty",
+        "description": "Chief Operating Officer",
+        "responsible": "Alice Brown",
+        "status": "Active",
+        "cost": "$350k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 5,
+        "parentId": 2,
+        "name": "Engineering Lead",
+        "description": "Leads engineering team",
+        "responsible": "Mike Johnson",
+        "status": "Active",
+        "cost": "$200k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 6,
+        "parentId": 2,
+        "name": "Product Manager",
+        "description": "Product management",
+        "responsible": "Sarah Lee",
+        "status": "Active",
+        "cost": "$180k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 7,
+        "parentId": 3,
+        "name": "Finance Manager",
+        "description": "Finance operations",
+        "responsible": "Tom Davis",
+        "status": "Active",
+        "cost": "$150k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 8,
+        "parentId": 5,
+        "name": "Senior Developer",
+        "description": "Senior software engineer",
+        "responsible": "Chris Martinez",
+        "status": "Active",
+        "cost": "$120k",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 9,
+        "parentId": 4,
+        "name": "New Node 5",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 10,
+        "parentId": 9,
+        "name": "New Node 7",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 11,
+        "parentId": 10,
+        "name": "New Node 9",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      }
+    ]
+  },
+  "techstart-eng": {
+    "id": "techstart-eng",
+    "title": "TechStart - Engineering Team",
+    "nextId": 9,
+    "createdAt": "2025-12-14T18:57:37.495Z",
+    "updatedAt": "2025-12-14T20:25:45.662Z",
+    "nodes": [
+      {
+        "id": 1,
+        "parentId": null,
+        "name": "VP Engineering",
+        "description": "Vice President of Engineering",
+        "responsible": "Maria Garcia",
+        "status": "Active",
+        "cost": "$400k",
+        "url": "",
+        "color": "#6B21A8",
+        "textColor": "white"
+      },
+      {
+        "id": 2,
+        "parentId": 1,
+        "name": "Frontend Lead",
+        "description": "Frontend Development Lead",
+        "responsible": "James Liu",
+        "status": "Active",
+        "cost": "$220k",
+        "url": "",
+        "color": "#2563EB",
+        "textColor": "white"
+      },
+      {
+        "id": 3,
+        "parentId": 1,
+        "name": "Harvey",
+        "description": "Backend Development Lead",
+        "responsible": "Sarah Johnson",
+        "status": "Active",
+        "cost": "$220k",
+        "url": "",
+        "color": "#2563EB",
+        "textColor": "white"
+      },
+      {
+        "id": 4,
+        "parentId": 1,
+        "name": "DevOps Lead",
+        "description": "DevOps & Infrastructure Lead",
+        "responsible": "Alex Chen",
+        "status": "Active",
+        "cost": "$220k",
+        "url": "",
+        "color": "#2563EB",
+        "textColor": "white"
+      },
+      {
+        "id": 5,
+        "parentId": 2,
+        "name": "React Developer",
+        "description": "Senior React Developer",
+        "responsible": "Emma Wilson",
+        "status": "Active",
+        "cost": "$140k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 6,
+        "parentId": 2,
+        "name": "UI Engineer",
+        "description": "UI/UX Engineer",
+        "responsible": "Ryan Park",
+        "status": "Active",
+        "cost": "$130k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 7,
+        "parentId": 3,
+        "name": "API Developer",
+        "description": "Backend API Developer",
+        "responsible": "Nina Patel",
+        "status": "Active",
+        "cost": "$135k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 8,
+        "parentId": 4,
+        "name": "SRE Engineer",
+        "description": "Site Reliability Engineer",
+        "responsible": "Tom Anderson",
+        "status": "Active",
+        "cost": "$145k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      }
+    ]
+  },
+  "global-marketing": {
+    "id": "global-marketing",
+    "title": "Global Marketing Division",
+    "nextId": 9,
+    "createdAt": "2025-12-14T18:57:37.495Z",
+    "updatedAt": "2025-12-14T18:57:37.495Z",
+    "nodes": [
+      {
+        "id": 1,
+        "parentId": null,
+        "name": "CMO",
+        "description": "Chief Marketing Officer",
+        "responsible": "Jennifer Adams",
+        "status": "Active",
+        "cost": "$380k",
+        "url": "",
+        "color": "#DC2626",
+        "textColor": "white"
+      },
+      {
+        "id": 2,
+        "parentId": 1,
+        "name": "Brand Director",
+        "description": "Brand Strategy Director",
+        "responsible": "Michael Brown",
+        "status": "Active",
+        "cost": "$200k",
+        "url": "",
+        "color": "#D97706",
+        "textColor": "white"
+      },
+      {
+        "id": 3,
+        "parentId": 1,
+        "name": "Digital Marketing",
+        "description": "Digital Marketing Director",
+        "responsible": "Lisa Zhang",
+        "status": "Active",
+        "cost": "$200k",
+        "url": "",
+        "color": "#D97706",
+        "textColor": "white"
+      },
+      {
+        "id": 4,
+        "parentId": 1,
+        "name": "Content Director",
+        "description": "Content Strategy Director",
+        "responsible": "David Kim",
+        "status": "Active",
+        "cost": "$190k",
+        "url": "",
+        "color": "#D97706",
+        "textColor": "white"
+      },
+      {
+        "id": 5,
+        "parentId": 2,
+        "name": "Brand Manager",
+        "description": "Brand Management",
+        "responsible": "Sophie Martin",
+        "status": "Active",
+        "cost": "$110k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 6,
+        "parentId": 3,
+        "name": "SEO Specialist",
+        "description": "Search Engine Optimization",
+        "responsible": "Chris Lee",
+        "status": "Active",
+        "cost": "$95k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 7,
+        "parentId": 3,
+        "name": "Social Media",
+        "description": "Social Media Manager",
+        "responsible": "Amy Taylor",
+        "status": "Active",
+        "cost": "$90k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      },
+      {
+        "id": 8,
+        "parentId": 4,
+        "name": "Content Writer",
+        "description": "Senior Content Writer",
+        "responsible": "Robert Clark",
+        "status": "Active",
+        "cost": "$85k",
+        "url": "",
+        "color": "#059669",
+        "textColor": "white"
+      }
+    ]
+  }
+}

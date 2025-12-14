@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WBS Organisational Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="./style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WBS Organisational Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="./style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <a href="/dashboard.html" class="back-to-dashboard">← Back to Dashboard</a>
+    <div class="controls">
+      <div id="colorPicker" class="color-picker">
+        <label for="colorSelect">Select Node Colour:</label>
+        <select id="colorSelect">
+          <option value="#003057" data-text-color="white">Blue</option>
+          <option value="#FF0000" data-text-color="white">Red</option>
+          <option value="#FFFF00" data-text-color="black">Yellow</option>
+          <option value="#00FF00" data-text-color="black">Green</option>
+        </select>
+        <button onclick="applyColor()">Apply</button>
+      </div>
+      <label id="titleLabel" class="popup-label">Title</label>
+      <input
+        id="editInput"
+        class="edit-input"
+        type="text"
+        placeholder="Node title"
+      />
+      <label id="urlLabel" class="popup-label">URL</label>
+      <input
+        id="editUrlInput"
+        class="edit-url-input"
+        type="text"
+        placeholder="Node URL"
+      />
+      <label id="infoLabel" class="popup-label">Description</label>
+      <textarea
+        id="editInfoInput"
+        class="edit-info-input"
+        placeholder="General description"
+      ></textarea>
+      <label id="personNameLabel" class="popup-label">Responsible</label>
+      <input
+        id="editPersonNameInput"
+        class="edit-person-name-input"
+        type="text"
+        placeholder="Owner"
+      />
+      <label id="statusLabel" class="popup-label">Status</label>
+      <input
+        id="editStatusInput"
+        class="edit-status-input"
+        type="text"
+        placeholder="Status"
+      />
+      <label id="costLabel" class="popup-label">Cost</label>
+      <input
+        id="editCostInput"
+        class="edit-cost-input"
+        type="text"
+        placeholder="Estimated cost"
+      />
+      <button id="saveButton" class="save-button" onclick="saveEdit()">
+        Save
+      </button>
+    </div>
+    <div class="svg-container">
+      <svg class="svg-content-responsive"></svg>
+    </div>
+    <button id="addNodeBtn">Add Node</button>
+    <button id="deleteNodeBtn">Delete Mode</button>
+    <button id="exportBtn">Export</button>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <script type="text/javascript" src="client.js"></script>
+  </body>
+</html>
