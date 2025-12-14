@@ -397,34 +397,12 @@ function canReparent(draggedNode, targetNode) {
 }
 
 function isDescendant(ancestorId, descendantId) {
-  const queue = [ancestorId];
-  const visited = new Set();
-  
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (visited.has(current)) continue;
-    visited.add(current);
-    
-    // Check children
-    Object.values(nodes).forEach(node => {
-      if (node.parentId === current) {
-        if (node.id === descendantId) return true;
-        queue.push(node.id);
-      }
-    });
+  const children = Object.values(nodes).filter(n => n.parentId === ancestorId);
+  for (const child of children) {
+    if (child.id === descendantId) return true;
+    if (isDescendant(child.id, descendantId)) return true;
   }
-  
-  // Also check with recursive approach
-  function checkDescendants(parentId) {
-    const children = Object.values(nodes).filter(n => n.parentId === parentId);
-    for (const child of children) {
-      if (child.id === descendantId) return true;
-      if (checkDescendants(child.id)) return true;
-    }
-    return false;
-  }
-  
-  return checkDescendants(ancestorId);
+  return false;
 }
 
 function reparentNode(nodeId, newParentId) {

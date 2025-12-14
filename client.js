@@ -1,6 +1,3 @@
-console.log('=== CLIENT.JS LOADED - VERSION 2.0 (with expand/collapse) ===');
-console.log('Expand/Collapse buttons should be present. If you see this but no buttons, check HTML.');
-
 let root;
 let i = 0;
 
@@ -85,7 +82,6 @@ const linkGenerator = d3
   .y((d) => d.y);
 
 let selectedNode = null;
-let clickTimeout = null;
 let hideTooltipTimeout = null;
 let deleteMode = false;
 
@@ -555,45 +551,10 @@ function toggleChildren(d) {
   }
 }
 
-function wrap(text, width) {
-  text.each(function () {
-    const text = d3.select(this),
-      words = text.text().split(/\s+/).reverse(),
-      lineHeight = 1.1,
-      y = text.attr("y"),
-      dy = parseFloat(text.attr("dy"));
-    let word,
-      line = [],
-      lineNumber = 0,
-      tspan = text
-        .text(null)
-        .append("tspan")
-        .attr("x", 0)
-        .attr("y", y)
-        .attr("dy", dy + "em");
-    while ((word = words.pop())) {
-      line.push(word);
-      tspan.text(line.join(" "));
-      if (tspan.node().getComputedTextLength() > width) {
-        line.pop();
-        tspan.text(line.join(" "));
-        line = [word];
-        tspan = text
-          .append("tspan")
-          .attr("x", 0)
-          .attr("y", y)
-          .attr("dy", ++lineNumber * lineHeight + dy + "em")
-          .text(word);
-      }
-    }
-  });
-}
-
 function wrapText(text, width) {
   if (!text) return [''];
   const words = text.split(/\s+/),
-    lines = [],
-    lineHeight = 1.1;
+    lines = [];
   let line = [];
 
   while (words.length) {
@@ -925,25 +886,8 @@ document
   .getElementById("deleteNodeBtn")
   .addEventListener("click", toggleDeleteMode);
 
-// Diagnostic: Check if expand/collapse buttons exist
-const expandBtn = document.getElementById("expandAllBtn");
-const collapseBtn = document.getElementById("collapseAllBtn");
-console.log('expandAllBtn element:', expandBtn);
-console.log('collapseAllBtn element:', collapseBtn);
-
-if (expandBtn) {
-  expandBtn.addEventListener("click", expandAll);
-  console.log('✓ expandAllBtn listener attached');
-} else {
-  console.error('✗ expandAllBtn NOT FOUND in HTML!');
-}
-
-if (collapseBtn) {
-  collapseBtn.addEventListener("click", collapseAll);
-  console.log('✓ collapseAllBtn listener attached');
-} else {
-  console.error('✗ collapseAllBtn NOT FOUND in HTML!');
-}
+document.getElementById("expandAllBtn").addEventListener("click", expandAll);
+document.getElementById("collapseAllBtn").addEventListener("click", collapseAll);
 
 document.getElementById("exportBtn").addEventListener("click", exportJson);
 document.getElementById("importBtn").addEventListener("click", openImportModal);
