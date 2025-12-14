@@ -107,6 +107,8 @@
 
 #addNodeBtn,
 #deleteNodeBtn,
+#expandAllBtn,
+#collapseAllBtn,
 #exportBtn {
   position: absolute;
   padding: 10px 20px;
@@ -126,9 +128,19 @@
   left: 380px;
 }
 
+#expandAllBtn {
+  top: 50px;
+  left: 510px;
+}
+
+#collapseAllBtn {
+  top: 50px;
+  left: 640px;
+}
+
 #exportBtn {
   top: 50px;
-  left: 550px;
+  left: 780px;
 }
 
 .delete-mode .node rect {

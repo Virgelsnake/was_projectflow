@@ -2,9 +2,9 @@
   "acme-corp": {
     "id": "acme-corp",
     "title": "Acme Corp - Executive Team",
-    "nextId": 12,
+    "nextId": 17,
     "createdAt": "2025-12-14T18:57:37.494Z",
-    "updatedAt": "2025-12-14T20:25:30.037Z",
+    "updatedAt": "2025-12-14T21:09:40.250Z",
     "nodes": [
       {
         "id": 1,
@@ -130,6 +130,66 @@
         "id": 11,
         "parentId": 10,
         "name": "New Node 9",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 12,
+        "parentId": 4,
+        "name": "New Node 5",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 13,
+        "parentId": 12,
+        "name": "New Node 7",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 14,
+        "parentId": 13,
+        "name": "New Node 9",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 15,
+        "parentId": 16,
+        "name": "New Node 11",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 16,
+        "parentId": 1,
+        "name": "New Node 6",
         "description": "",
         "responsible": "",
         "status": "",
@@ -346,6 +406,87 @@
         "cost": "$85k",
         "url": "",
         "color": "#059669",
+        "textColor": "white"
+      }
+    ]
+  },
+  "chart-1765744997383": {
+    "id": "chart-1765744997383",
+    "title": "test chart",
+    "nextId": 8,
+    "createdAt": "2025-12-14T20:43:17.383Z",
+    "updatedAt": "2025-12-14T21:09:12.838Z",
+    "nodes": [
+      {
+        "id": 1,
+        "parentId": null,
+        "name": "CEO",
+        "description": "Chief Executive",
+        "responsible": "",
+        "status": "Active",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 2,
+        "parentId": 1,
+        "name": "New Node 2",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 3,
+        "parentId": 1,
+        "name": "New Node 4",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 4,
+        "parentId": 1,
+        "name": "New Node 6",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 5,
+        "parentId": 4,
+        "name": "New Node 5",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      },
+      {
+        "id": 7,
+        "parentId": 5,
+        "name": "New Node 7",
+        "description": "",
+        "responsible": "",
+        "status": "",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
         "textColor": "white"
       }
     ]

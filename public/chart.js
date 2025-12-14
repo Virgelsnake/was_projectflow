@@ -10,6 +10,7 @@ let nodes = {};
 let selectedNode = null;
 let deleteMode = false;
 let isDragging = false;
+let collapsedNodes = new Set(); // Track which nodes have collapsed children
 
 // D3 elements
 let svg, g, zoom;
@@ -119,8 +120,8 @@ function render() {
   // Clear existing content
   g.selectAll('*').remove();
   
-  // Build hierarchy from nodes
-  const nodeArray = Object.values(nodes);
+  // Build hierarchy from nodes (only visible ones)
+  const nodeArray = getVisibleNodes();
   if (nodeArray.length === 0) return;
   
   // Create links group (render first so nodes appear on top)
@@ -206,6 +207,33 @@ function render() {
       .attr('font-size', '12px')
       .attr('opacity', 0.8)
       .text(d.content?.title || '');
+    
+    // Add collapse/expand toggle button if node has children
+    if (hasChildren(d.id)) {
+      const isCollapsed = collapsedNodes.has(d.id);
+      const toggleGroup = group.append('g')
+        .attr('class', 'collapse-toggle')
+        .attr('transform', `translate(${width / 2}, ${height})`)
+        .style('cursor', 'pointer')
+        .on('click', (event) => {
+          event.stopPropagation();
+          toggleNodeCollapse(d.id);
+        });
+      
+      toggleGroup.append('circle')
+        .attr('r', 10)
+        .attr('fill', '#fff')
+        .attr('stroke', d.content?.color || '#3B82F6')
+        .attr('stroke-width', 2);
+      
+      toggleGroup.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .attr('font-size', '14px')
+        .attr('font-weight', 'bold')
+        .attr('fill', d.content?.color || '#3B82F6')
+        .text(isCollapsed ? '+' : '−');
+    }
   });
   
   updateMinimap();
@@ -637,6 +665,60 @@ async function saveChart() {
 }
 
 // ============================================
+// EXPAND / COLLAPSE
+// ============================================
+function getVisibleNodes() {
+  // Returns nodes that should be visible (not hidden by collapsed ancestors)
+  const nodeArray = Object.values(nodes);
+  const hiddenNodes = new Set();
+  
+  // For each collapsed node, hide all its descendants
+  collapsedNodes.forEach(collapsedId => {
+    function hideDescendants(parentId) {
+      nodeArray.forEach(node => {
+        if (node.parentId === parentId) {
+          hiddenNodes.add(node.id);
+          hideDescendants(node.id);
+        }
+      });
+    }
+    hideDescendants(collapsedId);
+  });
+  
+  return nodeArray.filter(node => !hiddenNodes.has(node.id));
+}
+
+function hasChildren(nodeId) {
+  return Object.values(nodes).some(node => node.parentId === nodeId);
+}
+
+function expandAll() {
+  collapsedNodes.clear();
+  render();
+  showToast('All branches expanded', 'success');
+}
+
+function collapseAll() {
+  // Collapse all nodes that have children (except leaves)
+  Object.values(nodes).forEach(node => {
+    if (hasChildren(node.id)) {
+      collapsedNodes.add(node.id);
+    }
+  });
+  render();
+  showToast('All branches collapsed', 'success');
+}
+
+function toggleNodeCollapse(nodeId) {
+  if (collapsedNodes.has(nodeId)) {
+    collapsedNodes.delete(nodeId);
+  } else {
+    collapsedNodes.add(nodeId);
+  }
+  render();
+}
+
+// ============================================
 // ZOOM & PAN
 // ============================================
 function updateZoomIndicator(scale) {
@@ -762,6 +844,10 @@ function setupEventListeners() {
   document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
   document.getElementById('fitBtn').addEventListener('click', fitToScreen);
   
+  // Expand/Collapse buttons
+  document.getElementById('expandAllBtn').addEventListener('click', expandAll);
+  document.getElementById('collapseAllBtn').addEventListener('click', collapseAll);
+  
   // Delete mode button
   document.getElementById('deleteBtn').addEventListener('click', () => {
     deleteMode = !deleteMode;
@@ -829,6 +915,12 @@ function setupKeyboardShortcuts() {
         deleteMode = !deleteMode;
         document.body.classList.toggle('delete-mode', deleteMode);
         document.getElementById('deleteBtn').classList.toggle('active', deleteMode);
+        break;
+      case 'e':
+        expandAll();
+        break;
+      case 'c':
+        collapseAll();
         break;
       case 'f':
         fitToScreen();

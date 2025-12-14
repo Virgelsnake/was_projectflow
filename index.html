@@ -80,10 +80,21 @@
     </div>
     <button id="addNodeBtn">Add Node</button>
     <button id="deleteNodeBtn">Delete Mode</button>
+    <button id="expandAllBtn">Expand All</button>
+    <button id="collapseAllBtn">Collapse All</button>
     <button id="exportBtn">Export</button>
 
     <div id="tooltip" class="tooltip"></div>
 
-    <script type="text/javascript" src="client.js"></script>
+    <script>
+  console.log('=== INDEX.HTML LOADED - VERSION 2.0 ===');
+  console.log('Checking for expand/collapse buttons in DOM...');
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('All buttons in page:', document.querySelectorAll('button'));
+    console.log('expandAllBtn exists:', !!document.getElementById('expandAllBtn'));
+    console.log('collapseAllBtn exists:', !!document.getElementById('collapseAllBtn'));
+  });
+</script>
+<script type="text/javascript" src="client.js"></script>
   </body>
 </html>

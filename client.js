@@ -1,5 +1,23 @@
+console.log('=== CLIENT.JS LOADED - VERSION 2.0 (with expand/collapse) ===');
+console.log('Expand/Collapse buttons should be present. If you see this but no buttons, check HTML.');
+
 let root;
 let i = 0;
+
+// Function to get next unique node number
+function getNextNodeNumber() {
+  let maxNum = 0;
+  function findMax(node) {
+    const match = node.data.name.match(/New Node (\d+)/);
+    if (match) {
+      maxNum = Math.max(maxNum, parseInt(match[1], 10));
+    }
+    if (node.children) node.children.forEach(findMax);
+    if (node._children) node._children.forEach(findMax);
+  }
+  if (root) findMax(root);
+  return maxNum + 1;
+}
 
 // Get chart ID from URL query parameter
 const urlParams = new URLSearchParams(window.location.search);
@@ -146,6 +164,43 @@ function update(source) {
     .style("fill", (d) => d.data.color || "#2A3565")
     .style("stroke", "#ccc")
     .style("stroke-width", 2);
+
+  // Add expand/collapse toggle circle for nodes with children
+  nodeEnter
+    .filter((d) => d.children || d._children)
+    .append("circle")
+    .attr("class", "toggle-circle")
+    .attr("cy", (d) => {
+      const lines = wrapText(d.data.name, 140);
+      return (lines.length * 14 + 10) / 2 + 12;
+    })
+    .attr("r", 10)
+    .style("fill", "#fff")
+    .style("stroke", (d) => d.data.color || "#2A3565")
+    .style("stroke-width", 2)
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+      event.stopPropagation();
+      toggleChildren(d);
+      update(d);
+    });
+
+  // Add +/- text inside toggle circle
+  nodeEnter
+    .filter((d) => d.children || d._children)
+    .append("text")
+    .attr("class", "toggle-text")
+    .attr("y", (d) => {
+      const lines = wrapText(d.data.name, 140);
+      return (lines.length * 14 + 10) / 2 + 12;
+    })
+    .attr("dy", "0.35em")
+    .attr("text-anchor", "middle")
+    .style("font-size", "16px")
+    .style("font-weight", "bold")
+    .style("fill", (d) => d.data.color || "#2A3565")
+    .style("pointer-events", "none")
+    .text((d) => d._children ? "+" : "−");
 
   nodeEnter
     .append("foreignObject")
@@ -336,11 +391,27 @@ function update(source) {
       return -(lines.length * 14 + 10) / 2 + 4;
     });
 
+  // Update toggle text (+/-) based on collapsed state
+  nodeUpdate
+    .select(".toggle-text")
+    .text((d) => d._children ? "+" : "−");
+
+  // Create a set of visible node IDs for quick lookup
+  const visibleNodeIds = new Set(nodes.map(n => n.id || n.data?.id));
+  
   const nodeExit = node
     .exit()
     .transition()
     .duration(750)
-    .attr("transform", (d) => `translate(${source.x},${source.y})`)
+    .attr("transform", (d) => {
+      // Find the closest ancestor that is still visible in the tree
+      let ancestor = d.parent;
+      while (ancestor && !visibleNodeIds.has(ancestor.id || ancestor.data?.id)) {
+        ancestor = ancestor.parent;
+      }
+      const target = ancestor || source;
+      return `translate(${target.x},${target.y})`;
+    })
     .remove();
 
   nodeExit
@@ -377,7 +448,13 @@ function update(source) {
     .transition()
     .duration(750)
     .attr("d", (d) => {
-      const o = { x: source.x, y: source.y };
+      // Find the closest visible ancestor for the link's target
+      let ancestor = d.target.parent;
+      while (ancestor && !visibleNodeIds.has(ancestor.id || ancestor.data?.id)) {
+        ancestor = ancestor.parent;
+      }
+      const target = ancestor || source;
+      const o = { x: target.x, y: target.y };
       return linkGenerator({ source: o, target: o });
     })
     .remove();
@@ -659,22 +736,44 @@ function detectCollision(nodeA, nodeB) {
 }
 
 function reconnectNodes(draggedNode, targetNode) {
-  if (draggedNode.parent) {
-    draggedNode.parent.children = draggedNode.parent.children.filter(
-      (child) => child !== draggedNode,
-    );
-    if (draggedNode.parent.children.length === 0) {
-      delete draggedNode.parent.children;
+  const oldParent = draggedNode.parent;
+  
+  // Remove from old parent's children array
+  if (oldParent) {
+    if (oldParent.children) {
+      oldParent.children = oldParent.children.filter(
+        (child) => child !== draggedNode,
+      );
+      if (oldParent.children.length === 0) {
+        delete oldParent.children;
+      }
+    }
+    // Also check _children (collapsed state)
+    if (oldParent._children) {
+      oldParent._children = oldParent._children.filter(
+        (child) => child !== draggedNode,
+      );
+      if (oldParent._children.length === 0) {
+        delete oldParent._children;
+      }
     }
   }
 
+  // Add to new parent - always add to visible children to show the result
+  // If target is collapsed, expand it first so user can see the result
+  if (targetNode._children) {
+    targetNode.children = targetNode._children;
+    targetNode._children = null;
+  }
+  
   if (!targetNode.children) targetNode.children = [];
   targetNode.children.push(draggedNode);
   draggedNode.parent = targetNode;
 
+  // Update the data's parentId for persistence
   draggedNode.data.parentId = targetNode.data.id;
 
-  // Ensure draggedNode is positioned lower than the targetNode
+  // Recursively update depth for dragged node and all its descendants
   draggedNode.depth = targetNode.depth + 1;
   adjustNodePosition(draggedNode);
 
@@ -684,8 +783,16 @@ function reconnectNodes(draggedNode, targetNode) {
 }
 
 function adjustNodePosition(draggedNode) {
+  // Handle visible children
   if (draggedNode.children) {
     draggedNode.children.forEach((child) => {
+      child.depth = draggedNode.depth + 1;
+      adjustNodePosition(child);
+    });
+  }
+  // Handle collapsed children
+  if (draggedNode._children) {
+    draggedNode._children.forEach((child) => {
       child.depth = draggedNode.depth + 1;
       adjustNodePosition(child);
     });
@@ -694,13 +801,19 @@ function adjustNodePosition(draggedNode) {
 
 function isDescendant(parent, child) {
   if (parent === child) return true;
+  // Check visible children
   if (parent.children) {
-    return parent.children.some((node) => isDescendant(node, child));
+    if (parent.children.some((node) => isDescendant(node, child))) return true;
+  }
+  // Check collapsed children
+  if (parent._children) {
+    if (parent._children.some((node) => isDescendant(node, child))) return true;
   }
   return false;
 }
 
 function addNewNode() {
+  const nodeNum = getNextNodeNumber();
   fetch(apiUrl("/api/add-node"), {
     method: "POST",
     headers: {
@@ -708,7 +821,7 @@ function addNewNode() {
     },
     body: JSON.stringify({
       parentId: root?.data?.id,
-      name: `New Node ${++i}`,
+      name: `New Node ${nodeNum}`,
     }),
   })
     .then((response) => response.json())
@@ -776,8 +889,59 @@ function toggleDeleteMode() {
   );
 }
 
+function expandAll() {
+  function expand(d) {
+    if (d._children) {
+      d.children = d._children;
+      d._children = null;
+    }
+    if (d.children) {
+      d.children.forEach(expand);
+    }
+  }
+  if (root) {
+    expand(root);
+    update(root);
+  }
+}
+
+function collapseAll() {
+  function collapse(d) {
+    if (d.children) {
+      d._children = d.children;
+      d._children.forEach(collapse);
+      d.children = null;
+    }
+  }
+  if (root && root.children) {
+    root.children.forEach(collapse);
+    update(root);
+  }
+}
+
 document.getElementById("addNodeBtn").addEventListener("click", addNewNode);
 document
   .getElementById("deleteNodeBtn")
   .addEventListener("click", toggleDeleteMode);
+
+// Diagnostic: Check if expand/collapse buttons exist
+const expandBtn = document.getElementById("expandAllBtn");
+const collapseBtn = document.getElementById("collapseAllBtn");
+console.log('expandAllBtn element:', expandBtn);
+console.log('collapseAllBtn element:', collapseBtn);
+
+if (expandBtn) {
+  expandBtn.addEventListener("click", expandAll);
+  console.log('✓ expandAllBtn listener attached');
+} else {
+  console.error('✗ expandAllBtn NOT FOUND in HTML!');
+}
+
+if (collapseBtn) {
+  collapseBtn.addEventListener("click", collapseAll);
+  console.log('✓ collapseAllBtn listener attached');
+} else {
+  console.error('✗ collapseAllBtn NOT FOUND in HTML!');
+}
+
 document.getElementById("exportBtn").addEventListener("click", exportJson);
