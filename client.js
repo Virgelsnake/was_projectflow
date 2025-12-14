@@ -590,6 +590,7 @@ function wrap(text, width) {
 }
 
 function wrapText(text, width) {
+  if (!text) return [''];
   const words = text.split(/\s+/),
     lines = [],
     lineHeight = 1.1;
@@ -945,3 +946,141 @@ if (collapseBtn) {
 }
 
 document.getElementById("exportBtn").addEventListener("click", exportJson);
+document.getElementById("importBtn").addEventListener("click", openImportModal);
+
+// ============================================
+// IMPORT WBS FUNCTIONALITY
+// ============================================
+
+function openImportModal() {
+  document.getElementById('importModal').classList.add('show');
+  document.getElementById('importTextArea').value = '';
+  document.getElementById('importTextArea').focus();
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+}
+
+function showImportTab(tabName) {
+  // Update tab buttons
+  document.querySelectorAll('.import-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  // Update tab content
+  document.querySelectorAll('.import-tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.getElementById(tabName + 'Tab').classList.add('active');
+}
+
+function copyPrompt() {
+  const promptText = document.getElementById('aiPrompt').textContent;
+  navigator.clipboard.writeText(promptText).then(() => {
+    const btn = document.querySelector('.copy-prompt-btn');
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 2000);
+  });
+}
+
+function parseWBSText(text) {
+  const lines = text.split('\n').filter(line => line.trim());
+  const nodes = {};
+  
+  lines.forEach(line => {
+    // Match WBS number pattern: 1.0, 1.1, 1.1.1, etc.
+    const match = line.match(/^(\d+(?:\.\d+)*)\s+(.+)$/);
+    if (match) {
+      const wbsNumber = match[1];
+      const name = match[2].trim();
+      
+      // Determine parent WBS number
+      const parts = wbsNumber.split('.');
+      let parentId = null;
+      
+      if (parts.length > 2) {
+        // For 1.1.1 -> parent is 1.1
+        parts.pop();
+        parentId = parts.join('.');
+      } else if (parts.length === 2 && parts[1] !== '0') {
+        // For 1.1, 1.2, etc. -> parent is 1.0
+        parentId = parts[0] + '.0';
+      }
+      // For 1.0 (root) -> parentId stays null
+      
+      nodes[wbsNumber] = {
+        id: wbsNumber,
+        parentId: parentId,
+        name: `${wbsNumber} ${name}`,
+        color: '#2A3565'
+      };
+    }
+  });
+  
+  return nodes;
+}
+
+async function importWBS() {
+  const text = document.getElementById('importTextArea').value.trim();
+  
+  if (!text) {
+    alert('Please paste your WBS structure first.');
+    return;
+  }
+  
+  const parsedNodes = parseWBSText(text);
+  const nodeCount = Object.keys(parsedNodes).length;
+  
+  if (nodeCount === 0) {
+    alert('Could not parse any WBS items. Make sure each line starts with a WBS number (e.g., 1.0, 1.1, 1.1.1)');
+    return;
+  }
+  
+  // Confirm import
+  if (!confirm(`Found ${nodeCount} items to import. This will replace the current chart. Continue?`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(apiUrl('/api/import-wbs'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ nodes: parsedNodes }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Import failed');
+    }
+    
+    const data = await response.json();
+    
+    // Reload the chart with new data
+    closeImportModal();
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('Import error:', error);
+    alert('Failed to import WBS. Please try again.');
+  }
+}
+
+// Close modal when clicking outside
+document.getElementById('importModal').addEventListener('click', (e) => {
+  if (e.target.id === 'importModal') {
+    closeImportModal();
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('importModal').classList.contains('show')) {
+    closeImportModal();
+  }
+});

@@ -250,6 +250,44 @@ app.post("/api/add-node", (req, res) => {
   res.json({ id, name, children: [] });
 });
 
+// Import WBS structure (replaces all nodes in chart)
+app.post("/api/import-wbs", (req, res) => {
+  const chartId = req.query.chart || DEFAULT_CHART;
+  const chart = charts[chartId];
+  
+  if (!chart) {
+    return res.status(404).json({ error: 'Chart not found' });
+  }
+  
+  const { nodes: importedNodes } = req.body;
+  
+  if (!importedNodes || Object.keys(importedNodes).length === 0) {
+    return res.status(400).json({ error: 'No nodes provided' });
+  }
+  
+  // Convert imported nodes object to array format
+  const newNodes = Object.values(importedNodes).map(node => ({
+    id: node.id,
+    parentId: node.parentId,
+    name: node.name,
+    description: '',
+    responsible: '',
+    status: '',
+    cost: '',
+    url: '',
+    color: node.color || '#2A3565',
+    textColor: 'white'
+  }));
+  
+  // Replace chart nodes
+  chart.nodes = newNodes;
+  chart.nextId = newNodes.length + 1;
+  chart.updatedAt = new Date().toISOString();
+  saveCharts(charts);
+  
+  res.json({ success: true, count: newNodes.length });
+});
+
 app.delete("/api/delete-node", (req, res) => {
   const chartId = req.query.chart || DEFAULT_CHART;
   const chart = charts[chartId];

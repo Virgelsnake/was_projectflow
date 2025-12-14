@@ -82,9 +82,69 @@
     <button id="deleteNodeBtn">Delete Mode</button>
     <button id="expandAllBtn">Expand All</button>
     <button id="collapseAllBtn">Collapse All</button>
+    <button id="importBtn">Import WBS</button>
     <button id="exportBtn">Export</button>
 
     <div id="tooltip" class="tooltip"></div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="import-modal">
+      <div class="import-modal-content">
+        <div class="import-modal-header">
+          <h2>Import WBS Structure</h2>
+          <button class="import-modal-close" onclick="closeImportModal()">&times;</button>
+        </div>
+        <div class="import-modal-body">
+          <div class="import-tabs">
+            <button class="import-tab active" onclick="showImportTab('paste')">Paste WBS</button>
+            <button class="import-tab" onclick="showImportTab('prompt')">Get AI Prompt</button>
+          </div>
+          
+          <div id="pasteTab" class="import-tab-content active">
+            <p class="import-instructions">Paste your WBS structure below. Each line should start with a WBS number (e.g., 1.0, 1.1, 1.1.1):</p>
+            <textarea id="importTextArea" class="import-textarea" placeholder="1.0 Project Name
+1.1 Phase One
+1.1.1 Task One
+1.1.2 Task Two
+1.2 Phase Two
+1.2.1 Task Three"></textarea>
+            <div class="import-actions">
+              <button class="import-btn secondary" onclick="closeImportModal()">Cancel</button>
+              <button class="import-btn primary" onclick="importWBS()">Import</button>
+            </div>
+          </div>
+          
+          <div id="promptTab" class="import-tab-content">
+            <p class="import-instructions">Copy this prompt and paste it into your preferred AI (ChatGPT, Claude, Gemini, etc.):</p>
+            <div class="prompt-box">
+              <pre id="aiPrompt">Generate a Work Breakdown Structure (WBS) for: [YOUR PROJECT HERE]
+
+Format each line as:
+[WBS Number] [Task Name]
+
+Rules:
+- Start with 1.0 as the root/project name
+- Use decimal notation (1.1, 1.1.1, 1.1.2, 1.2, etc.)
+- Each level adds one decimal place
+- Keep task names concise (2-5 words)
+
+Example format:
+1.0 Website Redesign Project
+1.1 Planning Phase
+1.1.1 Requirements gathering
+1.1.2 Stakeholder interviews
+1.2 Design Phase
+1.2.1 Wireframes
+1.2.2 Visual design
+
+Generate a complete WBS with 3-4 levels of depth.</pre>
+              <button class="copy-prompt-btn" onclick="copyPrompt()">📋 Copy Prompt</button>
+            </div>
+            <p class="import-tip">💡 <strong>Tip:</strong> After the AI generates your WBS, copy the output and paste it in the "Paste WBS" tab.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script>
   console.log('=== INDEX.HTML LOADED - VERSION 2.0 ===');
