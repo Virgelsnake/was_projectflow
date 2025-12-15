@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (!chartId) {
     showToast('No chart ID provided', 'error');
-    setTimeout(() => window.location.href = '/dashboard.html', 2000);
+    setTimeout(() => window.location.href = '/public/dashboard-refined.html', 2000);
     return;
   }
   
@@ -87,12 +87,15 @@ async function loadChart() {
     
     if (!doc.exists) {
       showToast('Chart not found', 'error');
-      setTimeout(() => window.location.href = '/dashboard.html', 2000);
+      setTimeout(() => window.location.href = '/public/dashboard-refined.html', 2000);
       return;
     }
     
     chartData = { id: doc.id, ...doc.data() };
     nodes = chartData.snapshot?.nodes || {};
+    
+    // Auto-generate positions for nodes that don't have them
+    ensureNodePositions();
     
     // Set title
     document.getElementById('chartTitleInput').value = chartData.title || 'Untitled Chart';
@@ -111,6 +114,69 @@ async function loadChart() {
     console.error('Error loading chart:', error);
     showToast('Failed to load chart', 'error');
   }
+}
+
+// ============================================
+// AUTO-LAYOUT FOR NODES WITHOUT POSITIONS
+// ============================================
+function ensureNodePositions() {
+  const nodeArray = Object.values(nodes);
+  const needsLayout = nodeArray.some(n => !n.pos);
+  
+  if (!needsLayout) return;
+  
+  // Find root node (no parent)
+  const rootNode = nodeArray.find(n => !n.parentId);
+  if (!rootNode) return;
+  
+  // Build tree structure
+  function getChildren(parentId) {
+    return nodeArray.filter(n => n.parentId === parentId);
+  }
+  
+  // Calculate positions using tree layout
+  const nodeWidth = 160;
+  const nodeHeight = 72;
+  const horizontalSpacing = 40;
+  const verticalSpacing = 80;
+  
+  function layoutNode(node, x, y, level) {
+    node.pos = { x, y };
+    node.size = { w: nodeWidth, h: nodeHeight };
+    
+    const children = getChildren(node.id);
+    if (children.length === 0) return nodeWidth;
+    
+    // Calculate total width needed for children
+    let totalChildWidth = 0;
+    const childWidths = [];
+    
+    children.forEach(child => {
+      const width = layoutNode(child, 0, y + nodeHeight + verticalSpacing, level + 1);
+      childWidths.push(width);
+      totalChildWidth += width;
+    });
+    
+    totalChildWidth += (children.length - 1) * horizontalSpacing;
+    
+    // Position children centered under parent
+    let childX = x - (totalChildWidth - nodeWidth) / 2;
+    children.forEach((child, i) => {
+      const offsetX = childX - child.pos.x;
+      shiftSubtree(child, offsetX);
+      childX += childWidths[i] + horizontalSpacing;
+    });
+    
+    return Math.max(nodeWidth, totalChildWidth);
+  }
+  
+  function shiftSubtree(node, offsetX) {
+    node.pos.x += offsetX;
+    getChildren(node.id).forEach(child => shiftSubtree(child, offsetX));
+  }
+  
+  // Start layout from root
+  layoutNode(rootNode, 400, 100, 0);
 }
 
 // ============================================
@@ -135,9 +201,11 @@ function render() {
   nodeArray.forEach(node => {
     if (node.parentId && nodes[node.parentId]) {
       const parent = nodes[node.parentId];
+      // Skip if either node is missing position data
+      if (!parent.pos || !node.pos) return;
       links.push({
-        source: { x: parent.pos.x + 90, y: parent.pos.y + 40 },
-        target: { x: node.pos.x + 90, y: node.pos.y }
+        source: { x: parent.pos.x + 80, y: parent.pos.y + 36 },
+        target: { x: node.pos.x + 80, y: node.pos.y }
       });
     }
   });
@@ -150,9 +218,12 @@ function render() {
     .attr('class', 'link')
     .attr('d', d => linkGenerator(d));
   
+  // Filter out nodes without position data
+  const validNodes = nodeArray.filter(n => n.pos);
+  
   // Render nodes
   const nodeGroups = nodesGroup.selectAll('g.node')
-    .data(nodeArray, d => d.id)
+    .data(validNodes, d => d.id)
     .enter()
     .append('g')
     .attr('class', 'node')
@@ -168,44 +239,49 @@ function render() {
     .on('mouseover', showNodeTooltip)
     .on('mouseout', hideNodeTooltip);
   
-  // Node background
+  // Node background - Refined styling
   nodeGroups.append('rect')
-    .attr('width', d => d.size?.w || 180)
-    .attr('height', d => d.size?.h || 80)
-    .attr('rx', 8)
-    .attr('ry', 8)
-    .attr('fill', d => d.content?.color || '#3B82F6')
-    .attr('stroke', '#fff')
-    .attr('stroke-width', 2)
-    .style('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))');
+    .attr('class', 'node-rect')
+    .attr('width', d => d.size?.w || 160)
+    .attr('height', d => d.size?.h || 72)
+    .attr('rx', 12)
+    .attr('ry', 12)
+    .attr('fill', d => d.content?.color || '#2E90FA')
+    .attr('stroke', 'rgba(255,255,255,0.2)')
+    .attr('stroke-width', 1)
+    .style('filter', 'drop-shadow(0 2px 4px rgba(16, 24, 40, 0.06)) drop-shadow(0 4px 8px rgba(16, 24, 40, 0.1))');
   
   // Node content container
   nodeGroups.each(function(d) {
     const group = d3.select(this);
-    const width = d.size?.w || 180;
-    const height = d.size?.h || 80;
+    const width = d.size?.w || 160;
+    const height = d.size?.h || 72;
     const textColor = getContrastColor(d.content?.color || '#3B82F6');
     
-    // Name
+    // Name - Refined typography
     group.append('text')
       .attr('class', 'node-name')
       .attr('x', width / 2)
-      .attr('y', height / 2 - 8)
+      .attr('y', height / 2 - 6)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
-      .attr('font-size', '14px')
+      .attr('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif')
+      .attr('font-size', '13px')
       .attr('font-weight', '600')
+      .attr('letter-spacing', '-0.01em')
       .text(d.content?.name || 'Untitled');
     
-    // Title
+    // Title - Subtle secondary text
     group.append('text')
       .attr('class', 'node-title')
       .attr('x', width / 2)
       .attr('y', height / 2 + 12)
       .attr('text-anchor', 'middle')
       .attr('fill', textColor)
-      .attr('font-size', '12px')
-      .attr('opacity', 0.8)
+      .attr('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif')
+      .attr('font-size', '11px')
+      .attr('font-weight', '400')
+      .attr('opacity', 0.75)
       .text(d.content?.title || '');
     
     // Add collapse/expand toggle button if node has children
@@ -221,17 +297,19 @@ function render() {
         });
       
       toggleGroup.append('circle')
-        .attr('r', 10)
+        .attr('r', 9)
         .attr('fill', '#fff')
-        .attr('stroke', d.content?.color || '#3B82F6')
-        .attr('stroke-width', 2);
+        .attr('stroke', '#E5E7EB')
+        .attr('stroke-width', 1.5)
+        .style('filter', 'drop-shadow(0 1px 2px rgba(16, 24, 40, 0.05))');
       
       toggleGroup.append('text')
         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'central')
-        .attr('font-size', '14px')
-        .attr('font-weight', 'bold')
-        .attr('fill', d.content?.color || '#3B82F6')
+        .attr('font-family', 'Inter, -apple-system, BlinkMacSystemFont, sans-serif')
+        .attr('font-size', '12px')
+        .attr('font-weight', '500')
+        .attr('fill', '#667085')
         .text(isCollapsed ? '+' : '−');
     }
   });
@@ -755,7 +833,8 @@ function updateMinimap() {
   const minimapSvg = d3.select('#minimapSvg');
   minimapSvg.selectAll('*').remove();
   
-  const nodeArray = Object.values(nodes);
+  // Filter to only nodes with valid position data
+  const nodeArray = Object.values(nodes).filter(n => n.pos);
   if (nodeArray.length === 0) return;
   
   // Calculate bounds
@@ -764,8 +843,8 @@ function updateMinimap() {
   nodeArray.forEach(node => {
     minX = Math.min(minX, node.pos.x);
     minY = Math.min(minY, node.pos.y);
-    maxX = Math.max(maxX, node.pos.x + (node.size?.w || 180));
-    maxY = Math.max(maxY, node.pos.y + (node.size?.h || 80));
+    maxX = Math.max(maxX, node.pos.x + (node.size?.w || 160));
+    maxY = Math.max(maxY, node.pos.y + (node.size?.h || 72));
   });
   
   const padding = 20;
@@ -781,9 +860,9 @@ function updateMinimap() {
     minimapSvg.append('rect')
       .attr('x', padding + (node.pos.x - minX) * scale)
       .attr('y', padding + (node.pos.y - minY) * scale)
-      .attr('width', Math.max(4, (node.size?.w || 180) * scale))
-      .attr('height', Math.max(3, (node.size?.h || 80) * scale))
-      .attr('fill', node.content?.color || '#3B82F6')
+      .attr('width', Math.max(4, (node.size?.w || 160) * scale))
+      .attr('height', Math.max(3, (node.size?.h || 72) * scale))
+      .attr('fill', node.content?.color || '#2E90FA')
       .attr('rx', 1);
   });
 }

@@ -282,20 +282,126 @@
     </div>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="/firebase-config.js"></script>
+
   <script>
+    const db = window.firebaseDb;
+    const PSEUDO_USER_STORAGE_KEY = 'pseudoUserId';
+    let pseudoUserId = localStorage.getItem(PSEUDO_USER_STORAGE_KEY);
+    if (!pseudoUserId) {
+      pseudoUserId = `user-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(PSEUDO_USER_STORAGE_KEY, pseudoUserId);
+    }
+
     let charts = [];
-    
-    // Load charts on page load
+
     document.addEventListener('DOMContentLoaded', loadCharts);
-    
+
+    async function ensureSeededIfEmpty() {
+      const existing = await db
+        .collection('charts')
+        .where('ownerId', '==', pseudoUserId)
+        .limit(1)
+        .get();
+
+      if (!existing.empty) return;
+
+      const response = await fetch('/data/charts.json');
+      if (!response.ok) {
+        throw new Error('Failed to load seed data');
+      }
+      const seedData = await response.json();
+
+      const entries = Object.values(seedData);
+      for (const chart of entries) {
+        await seedChart(chart);
+      }
+    }
+
+    async function seedChart(chart) {
+      if (!chart?.id) return;
+
+      const chartRef = db.collection('charts').doc(String(chart.id));
+      const nodesRef = chartRef.collection('nodes');
+
+      const existingNodes = await nodesRef.get();
+      if (!existingNodes.empty) {
+        let batch = db.batch();
+        let ops = 0;
+        for (const doc of existingNodes.docs) {
+          batch.delete(doc.ref);
+          ops++;
+          if (ops >= 450) {
+            await batch.commit();
+            batch = db.batch();
+            ops = 0;
+          }
+        }
+        if (ops > 0) {
+          await batch.commit();
+        }
+      }
+
+      await chartRef.set(
+        {
+          title: chart.title || 'Untitled Chart',
+          ownerId: pseudoUserId,
+          nextId: chart.nextId || 2,
+          nodeCount: Array.isArray(chart.nodes) ? chart.nodes.length : 0,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+
+      const nodes = Array.isArray(chart.nodes) ? chart.nodes : [];
+      let batch = db.batch();
+      let ops = 0;
+      for (const node of nodes) {
+        const nodeId = String(node.id);
+        const parentId = node.parentId === null || node.parentId === undefined ? null : String(node.parentId);
+        batch.set(nodesRef.doc(nodeId), {
+          parentId,
+          name: node.name || '',
+          description: node.description || '',
+          responsible: node.responsible || '',
+          status: node.status || '',
+          cost: node.cost || '',
+          url: node.url || '',
+          color: node.color || '#003057',
+          textColor: node.textColor || 'white',
+        });
+        ops++;
+        if (ops >= 450) {
+          await batch.commit();
+          batch = db.batch();
+          ops = 0;
+        }
+      }
+      if (ops > 0) {
+        await batch.commit();
+      }
+    }
+
     async function loadCharts() {
       try {
-        const response = await fetch('/api/charts');
-        charts = await response.json();
+        await ensureSeededIfEmpty();
+
+        const snapshot = await db.collection('charts').where('ownerId', '==', pseudoUserId).get();
+        charts = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .sort((a, b) => {
+            const aTime = a.updatedAt?.toDate ? a.updatedAt.toDate().getTime() : 0;
+            const bTime = b.updatedAt?.toDate ? b.updatedAt.toDate().getTime() : 0;
+            return bTime - aTime;
+          });
+
         renderCharts();
       } catch (err) {
         console.error('Error loading charts:', err);
-        document.getElementById('chartsGrid').innerHTML = 
+        document.getElementById('chartsGrid').innerHTML =
           '<div class="empty-state"><h3>Error loading charts</h3><p>Please try again later</p></div>';
       }
     }
@@ -361,18 +467,29 @@
       const title = document.getElementById('chartTitle').value.trim() || 'Untitled Chart';
       
       try {
-        const response = await fetch('/api/charts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            nodes: [
-              { id: 1, parentId: null, name: 'CEO', description: 'Chief Executive', responsible: '', status: 'Active', cost: '', url: '', color: '#003057', textColor: 'white' }
-            ]
-          })
+        const chartRef = db.collection('charts').doc();
+
+        await chartRef.set({
+          title,
+          ownerId: pseudoUserId,
+          nextId: 2,
+          nodeCount: 1,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         });
-        
-        const newChart = await response.json();
+
+        await chartRef.collection('nodes').doc('1').set({
+          parentId: null,
+          name: 'CEO',
+          description: 'Chief Executive',
+          responsible: '',
+          status: 'Active',
+          cost: '',
+          url: '',
+          color: '#003057',
+          textColor: 'white',
+        });
+
         hideCreateModal();
         loadCharts();
       } catch (err) {

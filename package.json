@@ -4,8 +4,8 @@
   "description": "D3 Org Chart Example",
   "main": "server.js",
   "scripts": {
-    "start": "node server-persistent.js",
-    "start:memory": "node server-multi.js",
+    "start": "node server.js",
+    "start:firebase": "node server-firebase.js",
     "start:single": "node server.js"
   },
   "dependencies": {
