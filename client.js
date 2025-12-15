@@ -20,14 +20,88 @@ function getNextNodeNumber() {
 const urlParams = new URLSearchParams(window.location.search);
 const chartId = urlParams.get('chart') || 'acme-corp';
 
-// Build API URL with chart parameter
-function apiUrl(endpoint) {
-  return `${endpoint}?chart=${chartId}`;
+const db = window.firebaseDb;
+if (!db) {
+  alert('Firestore is not initialized. Check /firebase-config.js');
+  throw new Error('Firestore is not initialized. Check /firebase-config.js');
 }
 
-// Fetch initial data from the server
-fetch(apiUrl("/api/tree"))
-  .then((response) => response.json())
+const chartRef = db.collection('charts').doc(chartId);
+const nodesCollection = chartRef.collection('nodes');
+
+function normalizeId(value) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && /^[0-9]+$/.test(value)) return parseInt(value, 10);
+  return value;
+}
+
+function buildTree(nodes, parentId = null) {
+  return nodes
+    .filter((node) => node.parentId === parentId)
+    .map((node) => ({
+      id: node.id,
+      parentId: parentId,
+      name: node.name,
+      url: node.url,
+      additionalInfo: node.description,
+      personName: node.responsible,
+      status: node.status,
+      cost: node.cost,
+      color: node.color,
+      textColor: node.textColor,
+      children: buildTree(nodes, node.id),
+    }));
+}
+
+async function loadChartTree() {
+  const snapshot = await nodesCollection.get();
+  const flatNodes = snapshot.docs.map((doc) => {
+    const data = doc.data() || {};
+    return {
+      id: normalizeId(doc.id),
+      parentId: normalizeId(data.parentId === undefined ? null : data.parentId),
+      name: data.name || '',
+      description: data.description || '',
+      responsible: data.responsible || '',
+      status: data.status || '',
+      cost: data.cost || '',
+      url: data.url || '',
+      color: data.color || '#2A3565',
+      textColor: data.textColor || 'white',
+    };
+  });
+
+  return buildTree(flatNodes)[0] || {};
+}
+
+function getMaxNumericNodeId(node) {
+  let maxId = 0;
+
+  function visit(n) {
+    const idVal = n && n.data ? n.data.id : undefined;
+    const idNum =
+      typeof idVal === 'number'
+        ? idVal
+        : typeof idVal === 'string' && /^[0-9]+$/.test(idVal)
+          ? parseInt(idVal, 10)
+          : null;
+
+    if (typeof idNum === 'number' && Number.isFinite(idNum)) {
+      maxId = Math.max(maxId, idNum);
+    }
+
+    if (n.children) n.children.forEach(visit);
+    if (n._children) n._children.forEach(visit);
+  }
+
+  if (node) visit(node);
+
+  return maxId;
+}
+
+// Fetch initial data from Firestore
+loadChartTree()
   .then((data) => {
     console.log({ data });
     root = d3.hierarchy(data);
@@ -51,6 +125,10 @@ fetch(apiUrl("/api/tree"))
     
     // Center the tree on initial load (delayed to ensure zoom is ready)
     setTimeout(centerTree, 100);
+  })
+  .catch((err) => {
+    console.error(err);
+    alert('Failed to load chart from Firestore.');
   });
 
 const margin = { top: 40, right: 120, bottom: 50, left: 120 };
@@ -462,22 +540,27 @@ function update(source) {
 }
 
 function persist(node) {
-  fetch(apiUrl("/api/update-node"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      id: node.data.id,
-      parentId: node.data.parentId,
-      name: node.data.name,
-      url: node.data.url,
-      description: node.data.additionalInfo,
-      responsible: node.data.personName,
-      status: node.data.status,
-      cost: node.data.cost,
-    }),
-  }).catch((err) => console.error(err));
+  nodesCollection
+    .doc(String(node.data.id))
+    .set(
+      {
+        parentId: node.data.parentId === undefined ? null : node.data.parentId,
+        name: node.data.name,
+        url: node.data.url,
+        description: node.data.additionalInfo,
+        responsible: node.data.personName,
+        status: node.data.status,
+        cost: node.data.cost,
+      },
+      { merge: true },
+    )
+    .then(() =>
+      chartRef.set(
+        { updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+        { merge: true },
+      ),
+    )
+    .catch((err) => console.error(err));
 }
 
 function saveEdit() {
@@ -519,17 +602,22 @@ function applyColor() {
   const textColor =
     document.getElementById("colorSelect").selectedOptions[0].dataset.textColor;
   if (selectedNode) {
-    fetch(apiUrl("/api/update-node-color"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: selectedNode.data.id,
-        color: selectedColor,
-        textColor: textColor,
-      }),
-    }).catch((err) => console.error(err));
+    nodesCollection
+      .doc(String(selectedNode.data.id))
+      .set(
+        {
+          color: selectedColor,
+          textColor: textColor,
+        },
+        { merge: true },
+      )
+      .then(() =>
+        chartRef.set(
+          { updatedAt: firebase.firestore.FieldValue.serverTimestamp() },
+          { merge: true },
+        ),
+      )
+      .catch((err) => console.error(err));
 
     selectedNode.data.color = selectedColor;
     selectedNode.data.textColor = textColor;
@@ -774,73 +862,158 @@ function isDescendant(parent, child) {
   return false;
 }
 
-function addNewNode() {
+async function addNewNode() {
   const nodeNum = getNextNodeNumber();
-  fetch(apiUrl("/api/add-node"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      parentId: root?.data?.id,
-      name: `New Node ${nodeNum}`,
-    }),
-  })
-    .then((response) => response.json())
-    .then((newNodeData) => {
-      const newNode = d3.hierarchy(newNodeData);
 
-      if (!root.children) root.children = [];
-      root.children.push(newNode);
+  try {
+    const chartSnap = await chartRef.get();
+    const chartData = chartSnap.data() || {};
+    let nextId = chartData.nextId;
 
-      newNode.depth = 1;
-      newNode.height = 0;
-      newNode.parent = root;
-      newNode.x = width / 2;
-      newNode.y = 50;
+    if (typeof nextId !== 'number') {
+      nextId = getMaxNumericNodeId(root) + 1;
+      if (nextId < 2) nextId = 2;
+    }
 
-      update(root);
+    const newId = nextId;
+    const parentId = root?.data?.id === undefined ? null : root?.data?.id;
+    const newNodeName = `New Node ${nodeNum}`;
 
-      // Apply drag behaviour to the new node
-      g.selectAll("g.node")
-        .filter((d) => d.id === newNode.id)
-        .call(
-          d3
-            .drag()
-            .on("start", dragStarted)
-            .on("drag", dragged)
-            .on("end", dragEnded),
-        );
+    await nodesCollection.doc(String(newId)).set({
+      parentId: parentId,
+      name: newNodeName,
+      description: '',
+      responsible: '',
+      status: '',
+      cost: '',
+      url: '',
+      color: '#003057',
+      textColor: 'white',
     });
+
+    await chartRef.set(
+      {
+        nextId: newId + 1,
+        nodeCount: firebase.firestore.FieldValue.increment(1),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    const newNodeData = {
+      id: newId,
+      parentId: parentId,
+      name: newNodeName,
+      url: '',
+      additionalInfo: '',
+      personName: '',
+      status: '',
+      cost: '',
+      color: '#003057',
+      textColor: 'white',
+      children: [],
+    };
+
+    const newNode = d3.hierarchy(newNodeData);
+
+    if (!root.children) root.children = [];
+    root.children.push(newNode);
+
+    newNode.depth = 1;
+    newNode.height = 0;
+    newNode.parent = root;
+    newNode.x = width / 2;
+    newNode.y = 50;
+
+    update(root);
+
+    // Apply drag behaviour to the new node
+    g.selectAll("g.node")
+      .filter((d) => d.id === newNode.id)
+      .call(
+        d3
+          .drag()
+          .on("start", dragStarted)
+          .on("drag", dragged)
+          .on("end", dragEnded),
+      );
+  } catch (err) {
+    console.error(err);
+    alert('Failed to add node.');
+  }
 }
 
-function exportJson() {
-  window.location.href = apiUrl("/export-json");
+async function exportJson() {
+  try {
+    const tree = await loadChartTree();
+    const blob = new Blob([JSON.stringify(tree, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${chartId}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert('Failed to export chart JSON.');
+  }
 }
 
-function deleteNode(node) {
+async function deleteNode(node) {
   if (node === root) return;
 
-  fetch(apiUrl("/api/delete-node"), {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      id: node.data.id,
-    }),
-  })
-    .then(() => {
-      const parent = node.parent;
-      parent.children = parent.children.filter((child) => child !== node);
+  const idsToDelete = [];
 
-      if (parent.children.length === 0) {
-        delete parent.children;
+  function collectIds(n) {
+    idsToDelete.push(n.data.id);
+    if (n.children) n.children.forEach(collectIds);
+    if (n._children) n._children.forEach(collectIds);
+  }
+
+  collectIds(node);
+
+  try {
+    const chunkSize = 450;
+    for (let offset = 0; offset < idsToDelete.length; offset += chunkSize) {
+      const batch = db.batch();
+      const chunk = idsToDelete.slice(offset, offset + chunkSize);
+      chunk.forEach((id) => batch.delete(nodesCollection.doc(String(id))));
+      await batch.commit();
+    }
+
+    await chartRef.set(
+      {
+        nodeCount: firebase.firestore.FieldValue.increment(-idsToDelete.length),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    const parent = node.parent;
+    if (parent) {
+      if (parent.children) {
+        parent.children = parent.children.filter((child) => child !== node);
+        if (parent.children.length === 0) {
+          delete parent.children;
+        }
       }
+      if (parent._children) {
+        parent._children = parent._children.filter((child) => child !== node);
+        if (parent._children.length === 0) {
+          delete parent._children;
+        }
+      }
+    }
 
-      update(root);
-    })
-    .catch((err) => console.error(err));
+    update(root);
+  } catch (err) {
+    console.error(err);
+    alert('Failed to delete node.');
+  }
 }
 
 function toggleDeleteMode() {
@@ -991,20 +1164,64 @@ async function importWBS() {
   }
   
   try {
-    const response = await fetch(apiUrl('/api/import-wbs'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ nodes: parsedNodes }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Import failed');
+    const existing = await nodesCollection.get();
+    const toDelete = existing.docs.map((d) => d.id);
+
+    const chunkSize = 450;
+    for (let offset = 0; offset < toDelete.length; offset += chunkSize) {
+      const batch = db.batch();
+      const chunk = toDelete.slice(offset, offset + chunkSize);
+      chunk.forEach((id) => batch.delete(nodesCollection.doc(String(id))));
+      await batch.commit();
     }
-    
-    const data = await response.json();
-    
+
+    const newNodes = Object.values(parsedNodes);
+    for (let offset = 0; offset < newNodes.length; offset += chunkSize) {
+      const batch = db.batch();
+      const chunk = newNodes.slice(offset, offset + chunkSize);
+
+      chunk.forEach((n) => {
+        batch.set(nodesCollection.doc(String(n.id)), {
+          parentId: n.parentId === undefined ? null : n.parentId,
+          name: n.name,
+          description: '',
+          responsible: '',
+          status: '',
+          cost: '',
+          url: '',
+          color: n.color || '#2A3565',
+          textColor: 'white',
+        });
+      });
+
+      await batch.commit();
+    }
+
+    const maxNumericId = newNodes.reduce((max, n) => {
+      const idVal = n && n.id;
+      const idNum =
+        typeof idVal === 'number'
+          ? idVal
+          : typeof idVal === 'string' && /^[0-9]+$/.test(idVal)
+            ? parseInt(idVal, 10)
+            : null;
+
+      if (typeof idNum === 'number' && Number.isFinite(idNum)) {
+        return Math.max(max, idNum);
+      }
+
+      return max;
+    }, 0);
+
+    await chartRef.set(
+      {
+        nextId: maxNumericId > 0 ? maxNumericId + 1 : 2,
+        nodeCount: newNodes.length,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
     // Reload the chart with new data
     closeImportModal();
     window.location.reload();

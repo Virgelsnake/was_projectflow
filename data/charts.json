@@ -1603,5 +1603,26 @@
         "textColor": "white"
       }
     ]
+  },
+  "chart-1765756665165": {
+    "id": "chart-1765756665165",
+    "title": "Untitled Chart",
+    "nextId": 1,
+    "createdAt": "2025-12-14T23:57:45.165Z",
+    "updatedAt": "2025-12-14T23:57:45.165Z",
+    "nodes": [
+      {
+        "id": 1,
+        "parentId": null,
+        "name": "CEO",
+        "description": "Chief Executive",
+        "responsible": "",
+        "status": "Active",
+        "cost": "",
+        "url": "",
+        "color": "#003057",
+        "textColor": "white"
+      }
+    ]
   }
 }

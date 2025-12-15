@@ -9,14 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link href="./style.css" rel="stylesheet" type="text/css" />
   </head>
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WBS Organisational Chart</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link href="./style.css" rel="stylesheet" type="text/css" />
-  </head>
   <body>
     <a href="/dashboard.html" class="back-to-dashboard">← Back to Dashboard</a>
     <div class="controls">
@@ -146,15 +138,10 @@ Generate a complete WBS with 3-4 levels of depth.</pre>
       </div>
     </div>
 
-    <script>
-  console.log('=== INDEX.HTML LOADED - VERSION 2.0 ===');
-  console.log('Checking for expand/collapse buttons in DOM...');
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('All buttons in page:', document.querySelectorAll('button'));
-    console.log('expandAllBtn exists:', !!document.getElementById('expandAllBtn'));
-    console.log('collapseAllBtn exists:', !!document.getElementById('collapseAllBtn'));
-  });
-</script>
-<script type="text/javascript" src="client.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="/firebase-config.js"></script>
+
+    <script type="text/javascript" src="client.js"></script>
   </body>
 </html>
