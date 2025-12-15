@@ -1,164 +1,233 @@
-# Code Refactoring Log
-
-## Date: 14 December 2025
-
----
+# Refactor Report: Codebase Review, Refactor, and Dead Code Removal
 
 ## 1. Summary of Codebase Analysis
 
-### Architecture Overview
+### Overview of architecture and component relationships
 
-This is a **WBS (Work Breakdown Structure) / Org Chart application** with two parallel systems:
+This project is now intentionally structured as a **single-path application**:
 
-1. **Legacy System** (root directory): Express server + D3.js client
-   - `server.js` / `server-firebase.js` → `index.html` + `client.js` + `style.css`
-   - Uses server-side API calls
+- `server.js` serves static assets from the repository root and `public/`.
+- `dashboard.html` (root) is the authoritative dashboard listing charts from Firestore `charts`.
+- `index.html` + `client.js` (root) is the authoritative chart editor (D3) reading/writing Firestore `charts/{chartId}/nodes`.
+- `public/firebase-config.js` is the shared Firebase initialiser, loaded by both `dashboard.html` and `index.html`.
 
-2. **Modern Firebase System** (public directory): Client-side Firebase SDK
-   - `public/dashboard.html` + `dashboard.js` + `dashboard.css`
-   - `public/chart.html` + `chart.js` + `chart.css`
-   - Direct Firestore access from browser
+### Key dependencies identified
 
-### Starting Baseline (Pre-Refactor)
+- `express` (server)
+- D3.js (loaded via CDN in `index.html`)
+- Firebase client SDK (loaded via CDN in `dashboard.html` and `index.html`)
 
-| File | Lines |
-|------|-------|
-| client.js | 1,087 |
-| public/chart.js | 1,020 |
-| public/dashboard.css | 739 |
-| public/chart.css | 602 |
-| public/dashboard.js | 610 |
-| server-firebase.js | 437 |
-| style.css | 401 |
-| server-multi.js | 394 |
-| dashboard.html | 392 |
-| server-persistent.js | 368 |
-| public/dashboard.html | 221 |
-| public/chart.html | 183 |
-| seed-data.js | 245 |
-| index.html | 160 |
-| db/provider_firestore.js | 179 |
-| seed-firestore.js | 102 |
-| server.js | 132 |
-| db/provider_memory.js | 77 |
-| public/seed-charts.html | 76 |
-| server-new.js | 30 |
-| public/firebase-config.js | 19 |
-| db/utils.js | 3 |
-| **TOTAL** | **7,464** |
+### Key rationale (source of truth)
 
----
+The codebase previously contained **multiple parallel UI and persistence paths** (a `boards`-based “modern/refined” UI plus a server-side Firebase Admin API). These were removed to avoid multiple sources of truth and future developer confusion.
 
-## 2. Dead Code Deletions
+## 2. Refactoring Opportunities
 
-### 2.1 Redundant Server Files
+### 2.1 `server.js` — simplify to static-only server
 
-| File | Lines | Evidence | Reason Safe to Delete |
-|------|-------|----------|----------------------|
-| `server-multi.js` | 394 | In-memory storage with hardcoded demo data, identical API structure to server-firebase.js | Development iteration; server-firebase.js is production server |
-| `server-persistent.js` | 368 | File-based storage, hardcoded demo data, identical API to server-firebase.js | Development iteration; superseded by Firebase persistence |
-| `server-new.js` | 30 | Only serves static files, no API endpoints | Minimal stub; server-firebase.js handles this |
+- **File name and line number**:
+  - `server.js` (pre-refactor: lines 1–132)
+  - `server.js` (post-refactor: lines 1–11)
 
-Total lines removed: **792 lines**
+- **Original code snippet** (`server.js` pre-refactor, e.g. lines 1–6 and 15–26):
 
-### 2.2 Debug/Diagnostic Code in client.js
+```js
+const express = require("express");
+const { dbProvider } = require("./db/utils");
 
-| Location | Code | Reason |
-|----------|------|--------|
-| Lines 1-2 | Debug version logging | Production noise |
-| Lines 928-946 | Diagnostic console.log for buttons | Development debugging |
+const { addNode, deleteNode, listNodes, updateNode, updateNodeColor } = require(
+  `./db/provider_${dbProvider}.js`,
+);
 
-### 2.3 Dead Function in client.js
+// ...
 
-| Function | Lines | Evidence |
-|----------|-------|----------|
-| `wrap()` | 558-590 | Never called anywhere in codebase; replaced by `wrapText()` |
+app.get("/api/tree", (req, res) => {
+  listNodes((err, nodes) => {
+    const tree = buildTree(nodes)[0] || {};
+    res.json(tree);
+  });
+});
+```
 
-### 2.4 Redundant Code in chart.js
+- **Refactored version** (`server.js` post-refactor, lines 1–11):
 
-| Location | Issue |
-|----------|-------|
-| `isDescendant()` lines 399-428 | Contains both BFS queue approach AND recursive approach; only one needed |
+```js
+const express = require("express");
 
----
+const app = express();
+const port = process.env.PORT || 3000;
 
-## 3. Refactoring Opportunities
+app.use(express.static("."));
+app.use(express.static("public"));
 
-### 3.1 client.js - Repeated DOM Element Lookups
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
+```
 
-The same DOM elements are fetched repeatedly in multiple functions. Can be cached.
+- **Justification**:
+  - The application now persists via **client-side Firestore** exclusively.
+  - Keeping `/api/*` and DB-provider indirection implied a second persistence path and increased maintenance overhead.
 
-### 3.2 client.js - Repeated wrapText() Calculations
+- **Expected impact**:
+  - Improved readability and reduced surface area.
+  - Removes risk of stale/unused API endpoints being accidentally revived.
 
-Same `wrapText(d.data.name, 140)` calculated multiple times per node.
+### 2.2 `index.html` — remove duplicated `<head>` and debug-only script
 
----
+- **File name and line number**:
+  - `index.html` pre-refactor: duplicated `<head>` block at lines 12–19
+  - `index.html` pre-refactor: debug `<script>` block near the end (removed)
+
+- **Original code snippet** (`index.html` pre-refactor, lines 11–20):
+
+```html
+</head>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WBS Organisational Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link href="./style.css" rel="stylesheet" type="text/css" />
+</head>
+```
+
+- **Refactored version** (`index.html` post-refactor, lines 1–12):
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WBS Organisational Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="./style.css" rel="stylesheet" type="text/css" />
+  </head>
+```
+
+- **Justification**:
+  - Duplicated `<head>` is invalid HTML and makes the page harder to maintain.
+  - Debug logging created noise without functional benefit.
+
+- **Expected impact**:
+  - Improved correctness and reduced confusion.
+
+### 2.3 `package.json` — remove unused scripts and `firebase-admin`
+
+- **File name and line number**:
+  - `package.json` pre-refactor: scripts (lines 6–10), dependencies (lines 11–14)
+
+- **Original code snippet** (`package.json` pre-refactor):
+
+```json
+"scripts": {
+  "start": "node server.js",
+  "start:firebase": "node server-firebase.js",
+  "start:single": "node server.js"
+},
+"dependencies": {
+  "express": "^4.18.2",
+  "firebase-admin": "^13.6.0"
+}
+```
+
+- **Refactored version** (`package.json` post-refactor):
+
+```json
+"scripts": {
+  "start": "node server.js"
+},
+"dependencies": {
+  "express": "^4.18.2"
+}
+```
+
+- **Justification**:
+  - `server-firebase.js` was deleted; the Admin SDK is no longer used.
+  - Multiple start scripts suggested multiple authoritative run modes.
+
+- **Expected impact**:
+  - Clear single entry point: `npm start`.
+
+## 3. Dead Code Deletions
+
+### 3.1 Delete `public/*` “boards” dashboard/editor (duplicate UI path)
+
+- **File name and line number**:
+  - `public/dashboard.js` (deleted; evidence at lines 53–60)
+
+- **Deleted code snippet** (`public/dashboard.js` pre-deletion, lines 53–60):
+
+```js
+// Load charts from Firestore
+async function loadCharts() {
+  const snapshot = await db.collection('boards').orderBy('updatedAt', 'desc').get();
+  charts = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+}
+```
+
+- **Evidence of dead code status**:
+  - The `boards` collection is no longer part of the authoritative data model.
+  - These files were an alternate UI flow and are now removed from disk.
+
+- **Reason it is safe to delete**:
+  - Root `dashboard.html` + root `index.html` fully cover listing/creating/editing charts via `charts`.
+
+### 3.2 Delete server-side Firebase Admin API (`server-firebase.js`)
+
+- **File name and line number**:
+  - `server-firebase.js` (deleted; evidence at lines 1–15 and 270–276)
+
+- **Deleted code snippet** (`server-firebase.js` pre-deletion, lines 1–12):
+
+```js
+const express = require("express");
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: 'wbs-orgflow',
+    credential: admin.credential.applicationDefault()
+  });
+}
+```
+
+- **Evidence of dead code status**:
+  - The editor/dashboard perform reads/writes via Firebase client SDK.
+  - `server.js` is now static-only; no server API is required.
+
+- **Reason it is safe to delete**:
+  - Retaining a second persistence layer would reintroduce competing sources of truth.
 
 ## 4. Change Log
 
-| Timestamp | Action | File | Lines Affected |
-|-----------|--------|------|----------------|
-| 2025-12-14 21:50 | DELETE | server-multi.js | -394 |
-| 2025-12-14 21:50 | DELETE | server-persistent.js | -368 |
-| 2025-12-14 21:50 | DELETE | server-new.js | -30 |
-| 2025-12-14 21:51 | REMOVE debug logs | client.js | -19 |
-| 2025-12-14 21:52 | REMOVE dead wrap() function | client.js | -33 |
-| 2025-12-14 21:53 | SIMPLIFY isDescendant() | chart.js | -17 |
-
----
+- **2025-12-15** — Simplified `server.js` to static-only server.
+- **2025-12-15** — Cleaned `index.html` (removed duplicate `<head>` and debug logging).
+- **2025-12-15** — Deleted duplicate “boards/refined” UI under `public/`.
+- **2025-12-15** — Deleted `server-firebase.js`, DB providers, and seed scripts.
+- **2025-12-15** — Simplified `package.json` to a single `start` script and removed `firebase-admin`.
 
 ## 5. Fallback Guidance
 
-### To Trace Issues
+### Steps to trace and isolate issues
 
-1. If legacy server breaks: Check `server-firebase.js` handles all routes previously in deleted servers
-2. If client.js buttons fail: Re-add diagnostic logs temporarily
-3. If drag-drop cycle detection fails: Verify `isDescendant()` still works correctly
+1. If charts do not load in `dashboard.html`:
+   - Confirm Firestore rules allow reads of `charts` for the current pseudo-user.
+   - Check browser console for Firestore permission errors.
+2. If `index.html` fails to load chart data:
+   - Ensure `/firebase-config.js` loads (served from `public/firebase-config.js`).
+   - Verify URL includes `?chart=<chartId>`.
 
-### Recommended Tests Post-Refactor
+### Recommended tests post-refactor
 
-1. Start server: `node server-firebase.js`
-2. Open dashboard: `http://localhost:3000/dashboard.html`
-3. Create new chart
-4. Add nodes, drag to reparent
-5. Collapse/expand nodes
-6. Export JSON
-
----
-
-## 6. Final Results
-
-| Metric | Before | After | Savings |
-|--------|--------|-------|---------|
-| **Total Lines** | 7,464 | 6,597 | **867 lines (11.6%)** |
-| Server Files | 5 | 2 | 3 files deleted |
-| Dead Functions | 2 | 0 | 2 removed |
-| Dead Variables | 2 | 0 | 2 removed |
-
-### Detailed File Changes
-
-| File | Before | After | Change |
-|------|--------|-------|--------|
-| server-multi.js | 394 | 0 | **DELETED** |
-| server-persistent.js | 368 | 0 | **DELETED** |
-| server-new.js | 30 | 0 | **DELETED** |
-| client.js | 1,087 | 1,030 | -57 lines |
-| public/chart.js | 1,020 | 997 | -23 lines |
-
-### Summary of Actions Taken
-
-1. **Deleted 3 redundant server files** (792 lines)
-   - `server-multi.js` - In-memory demo server (superseded by Firebase)
-   - `server-persistent.js` - File-based server (superseded by Firebase)
-   - `server-new.js` - Minimal stub (functionality in server-firebase.js)
-
-2. **Cleaned client.js** (57 lines removed)
-   - Removed debug console.log version statements (lines 1-2)
-   - Removed diagnostic button logging (18 lines)
-   - Removed unused `wrap()` function (33 lines)
-   - Removed unused `clickTimeout` variable
-   - Removed unused `lineHeight` variable
-
-3. **Simplified chart.js** (23 lines removed)
-   - Removed redundant BFS implementation from `isDescendant()` function
-   - Kept simpler recursive approach only
+1. Start server: `npm start`
+2. Open: `http://localhost:3000/dashboard.html`
+3. Create chart; open chart; add/edit/delete/reparent nodes.
+4. Import WBS; refresh; verify persistence.

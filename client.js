@@ -100,12 +100,7 @@ function getMaxNumericNodeId(node) {
   return maxId;
 }
 
-// Build API URL with chart parameter
-function apiUrl(endpoint) {
-  return `${endpoint}?chart=${chartId}`;
-}
-
-// Fetch initial data from the server
+// Fetch initial data from Firestore
 loadChartTree()
   .then((data) => {
     console.log({ data });
